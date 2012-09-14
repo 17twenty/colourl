@@ -82,6 +82,7 @@ public class ColourLOVER : GLib.Object
                         box.pack_start(m_grid, true, false, 0);
                 }
                 box.remove(temp_spinner);
+                box.remove(temp_label);
         }
         
         private void set_wallpaper() {
@@ -100,35 +101,33 @@ public class ColourLOVER : GLib.Object
                 // Go do some webby stuff and print to console
                 string cached_image = "";
                 string image_name_to_try = m_id + ".png";
-                var session = new Soup.SessionAsync();
-                
-                // We're going to use JSON as libxml2 sucks
-                var message = new Soup.Message("GET", image_address);
-
-                // send the HTTP request
-                session.send_message(message);
-
                 var file = File.new_for_path(image_name_to_try);
-                if (file.query_exists()) {
-                       try {
-                                file.delete();
+                if (!file.query_exists()) {
+                        var session = new Soup.SessionAsync();
+                        
+                        // We're going to use JSON as libxml2 sucks
+                        var message = new Soup.Message("GET", image_address);
+
+                        // send the HTTP request
+                        session.send_message(message);
+
+                        try {
+                                var data_stream = new DataOutputStream(file.create(FileCreateFlags.REPLACE_DESTINATION));
+                                // Set byte order? data_stream.set_byte_order(DataStreamByteOrder.LITTLE_ENDIAN);
+                                try {
+                                        data_stream.write(message.response_body.data);
+                                        cached_image = image_name_to_try;
+                                        
+                                } catch (GLib.IOError e) {
+                                        GLib.warning("%s\n", e.message);
+                                }
                         } catch (GLib.Error e) {
                                 GLib.warning("%s\n", e.message);
                         }
+                } else {
+                        cached_image = image_name_to_try;
                 }
-                try {
-                        var data_stream = new DataOutputStream(file.create(FileCreateFlags.REPLACE_DESTINATION));
-                        // Set byte order? data_stream.set_byte_order(DataStreamByteOrder.LITTLE_ENDIAN);
-                        try {
-                                data_stream.write(message.response_body.data);
-                                cached_image = image_name_to_try;
-                                
-                        } catch (GLib.IOError e) {
-                                GLib.warning("%s\n", e.message);
-                        }
-                } catch (GLib.Error e) {
-                        GLib.warning("%s\n", e.message);
-                }
+                
                 return cached_image;
         }
         
